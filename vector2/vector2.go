@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-10 16:58:56
  * @Last Modified by: sealon
- * @Last Modified time: 2020-09-14 11:01:35
+ * @Last Modified time: 2020-09-17 19:06:50
  * @Desc: float32 2D向量封装
  */
 package vector2
@@ -58,6 +58,13 @@ func (t *Vector) IsZero() bool {
 }
 
 //-------------------------------------------- 实现generic.T end -------------------------------------
+
+func (t *Vector) X() float32 {
+	return t[0]
+}
+func (t *Vector) Y() float32 {
+	return t[1]
+}
 
 func (t *Vector) Length() float32 {
 	return float32(math.Hypot(float64(t[0]), float64(t[1])))

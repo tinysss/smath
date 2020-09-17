@@ -1,40 +1,44 @@
 /*
  * @Author: sealon
- * @Date: 2020-09-14 10:59:46
+ * @Date: 2020-09-17 17:54:30
  * @Last Modified by: sealon
- * @Last Modified time: 2020-09-17 19:07:06
+ * @Last Modified time: 2020-09-17 19:08:35
  * @Desc:
  */
-package vector3
+
+package vector4
 
 import (
 	"math"
 
 	"github.com/tinysss/smath/generic"
+	"github.com/tinysss/smath/vector3"
 )
 
-type Vector [3]float32
+type Vector [4]float32
 
 var (
-	Zero    = Vector{}
-	UnitX   = Vector{1, 0, 0}
-	UnitY   = Vector{0, 1, 0}
-	UnitZ   = Vector{0, 0, 1}
-	UnitXYZ = Vector{1, 1, 1}
-	MinVal  = Vector{-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32}
-	MaxVal  = Vector{math.MaxFloat32, math.MaxFloat32, math.MaxFloat32}
+	Zero     = Vector{}
+	UnitXW   = Vector{1, 0, 0, 1}
+	UnitYW   = Vector{0, 1, 0, 1}
+	UnitZW   = Vector{0, 0, 1, 1}
+	UnitXYZW = Vector{1, 1, 1, 1}
+	MinVal   = Vector{-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32, 1}
+	MaxVal   = Vector{math.MaxFloat32, math.MaxFloat32, math.MaxFloat32, 1}
 )
 
-func New(f1, f2, f3 float32) *Vector {
-	return &Vector{f1, f2, f3}
+func New(f1, f2, f3, f4 float32) *Vector {
+	return &Vector{f1, f2, f3, f4}
 }
 
 func FromNew(other generic.T) *Vector {
 	switch other.Size() {
 	case 2:
 		return &Vector{other.Get(0, 0), other.Get(0, 1), 0}
-	case 3, 4:
+	case 3:
 		return &Vector{other.Get(0, 0), other.Get(0, 1), other.Get(0, 2)}
+	case 4:
+		return &Vector{other.Get(0, 0), other.Get(0, 1), other.Get(0, 2), other.Get(0, 3)}
 	default:
 		panic("unsupported type.")
 	}
@@ -42,7 +46,7 @@ func FromNew(other generic.T) *Vector {
 
 //-------------------------------------------- 实现generic.T begin-------------------------------------
 func (t *Vector) Cols() int {
-	return 3
+	return 4
 }
 
 func (t *Vector) Rows() int {
@@ -50,7 +54,7 @@ func (t *Vector) Rows() int {
 }
 
 func (t *Vector) Size() int {
-	return 3
+	return 4
 }
 
 func (t *Vector) Slice() []float32 {
@@ -62,7 +66,7 @@ func (t *Vector) Get(row, col int) float32 {
 }
 
 func (t *Vector) IsZero() bool {
-	return t[0] == 0 && t[1] == 0 && t[2] == 0
+	return t[0] == 0 && t[1] == 0 && t[2] == 0 && t[3] == 0
 }
 
 //-------------------------------------------- 实现generic.T end -------------------------------------
@@ -76,13 +80,18 @@ func (t *Vector) Y() float32 {
 func (t *Vector) Z() float32 {
 	return t[2]
 }
+func (t *Vector) W() float32 {
+	return t[3]
+}
 
 func (t *Vector) Length() float32 {
-	return float32(math.Sqrt(float64(t[0]*t[0] + t[1]*t[1] + t[2]*t[2])))
+	v4 := t.DividedByW()
+	return v4.Length()
 }
 
 func (t *Vector) LengthSqr() float32 {
-	return t[0]*t[0] + t[1]*t[1] + t[2]*t[2]
+	v4 := t.DividedByW()
+	return v4.LengthSqr()
 }
 
 // 缩放自身
@@ -111,24 +120,14 @@ func (t *Vector) Inverted() Vector {
 	return Vector{-t[0], -t[1], -t[2]}
 }
 
-func (t *Vector) Abs() *Vector {
-	t[0] = float32(math.Abs(float64(t[0])))
-	t[1] = float32(math.Abs(float64(t[1])))
-	t[2] = float32(math.Abs(float64(t[2])))
-	return t
-}
-
-func (t *Vector) Absed() Vector {
-	return Vector{float32(math.Abs(float64(t[0]))), float32(math.Abs(float64(t[1]))), float32(math.Abs(float64(t[2])))}
-}
-
-// 归一化  v norm = (1/|v|)*v
+// 使用vector3 归一化
 func (t *Vector) Normalize() *Vector {
-	l := t.LengthSqr()
-	if l == 0 || l == 1 {
-		return t
-	}
-	t.Scale(float32(1 / math.Sqrt(float64(l))))
+	v3 := t.Vec3DividedByW()
+	v3.Normalize()
+	t[0] = v3[0]
+	t[1] = v3[1]
+	t[2] = v3[2]
+	t[3] = 1
 	return t
 }
 
@@ -141,31 +140,84 @@ func (t *Vector) Normalized() Vector {
 
 // 标准化正交向量
 func (t *Vector) Normal() Vector {
-	n := Cross(t, &UnitZ)
-	if n.IsZero() {
-		return UnitX
-	}
-	return n.Normalized()
+	v3 := t.Vector3()
+	n3 := v3.Normal()
+	return Vector{n3[0], n3[1], n3[2], 1}
 }
 
+// 根据W分量取值, 自身
+func (t *Vector) DivideByW() *Vector {
+	if t[3] == 1 {
+		return t
+	}
+	s := 1 / t[3]
+	t[0] *= s
+	t[1] *= s
+	t[2] *= s
+	t[3] = 1
+	return t
+}
+
+// 根据W分量取值， 拷贝
+func (t *Vector) DividedByW() Vector {
+	if t[3] == 1 {
+		return *t
+	}
+	s := 1 / t[3]
+	return Vector{t[0] * s, t[1] * s, t[2] * s, 1}
+}
+
+// 根据W分量取值， vector3拷贝
+func (t *Vector) Vec3DividedByW() vector3.Vector {
+	if t[3] == 1 {
+		return vector3.Vector{t[0], t[1], t[2]}
+	}
+	s := 1 / t[3]
+	return vector3.Vector{t[0] * s, t[1] * s, t[2] * s}
+}
+
+// 转vector3
+func (t *Vector) Vector3() vector3.Vector {
+	return vector3.Vector{t[0], t[1], t[2]}
+}
+
+func (t *Vector) AssignVec3(v *vector3.Vector) *Vector {
+	t[0] = v[0]
+	t[1] = v[1]
+	t[2] = v[2]
+	t[3] = 1
+	return t
+}
+
+// ps:w不同时，统一转1
 func (t *Vector) Add(v *Vector) *Vector {
-	t[0] += v[0]
-	t[1] += v[1]
-	t[2] += v[2]
+	if t[3] == v[3] {
+		t[0] += v[0]
+		t[1] += v[1]
+		t[2] += v[2]
+		return t
+	}
+	t.DivideByW()
+	v3 := v.Vec3DividedByW()
+	t[0] += v3[0]
+	t[1] += v3[1]
+	t[2] += v3[2]
 	return t
 }
 
 func (t *Vector) Sub(v *Vector) *Vector {
-	t[0] -= v[0]
-	t[1] -= v[1]
-	t[2] -= v[2]
-	return t
-}
+	if t[3] == v[3] {
+		t[0] -= v[0]
+		t[1] -= v[1]
+		t[2] -= v[2]
+		return t
+	}
 
-func (t *Vector) Mul(v *Vector) *Vector {
-	t[0] *= v[0]
-	t[1] *= v[1]
-	t[2] *= v[2]
+	t.DivideByW()
+	v3 := v.Vec3DividedByW()
+	t[0] -= v3[0]
+	t[1] -= v3[1]
+	t[2] -= v3[2]
 	return t
 }
 
@@ -187,7 +239,7 @@ func (t *Vector) Clamped(min, max *Vector) Vector {
 }
 
 func (t *Vector) Clamp01() *Vector {
-	return t.Clamp(&Zero, &UnitXYZ)
+	return t.Clamp(&Zero, &UnitXYZW)
 }
 
 func (t *Vector) Clamped01() Vector {
@@ -197,42 +249,38 @@ func (t *Vector) Clamped01() Vector {
 }
 
 func Add(a, b *Vector) Vector {
-	return Vector{a[0] + b[0], a[1] + b[1], a[2] + b[2]}
-}
-
-func SquareDistance(a, b *Vector) float32 {
-	d := Sub(a, b)
-	return d.LengthSqr()
-}
-
-func Distance(a, b *Vector) float32 {
-	d := Sub(a, b)
-	return d.Length()
+	if a[3] == b[3] {
+		return Vector{a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3]}
+	}
+	a1 := a.Vec3DividedByW()
+	b1 := b.Vec3DividedByW()
+	return Vector{a1[0] + b1[0], a1[1] + b1[1], a1[2] + b1[2], 1}
 }
 
 func Sub(a, b *Vector) Vector {
-	return Vector{a[0] - b[0], a[1] - b[1], a[2] - b[2]}
-}
-
-func Mul(a, b *Vector) Vector {
-	return Vector{a[0] * b[0], a[1] * b[1], a[2] * b[2]}
+	if a[3] == b[3] {
+		return Vector{a[0] - b[0], a[1] - b[1], a[2] - b[2], a[3]}
+	}
+	a1 := a.Vec3DividedByW()
+	b1 := b.Vec3DividedByW()
+	return Vector{a1[0] - b1[0], a1[1] - b1[1], a1[2] - b1[2], 1}
 }
 
 func Dot(a, b *Vector) float32 {
-	return a[0]*b[0] + a[1]*b[1] + a[2]*b[2]
+	a3 := a.Vec3DividedByW()
+	b3 := b.Vec3DividedByW()
+	return vector3.Dot(&a3, &b3)
 }
 
-/*
-	a0  b0
-	a1	b1
-	a2  b2
-*/
+func Dot4(a, b *Vector) float32 {
+	return a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3]
+}
+
 func Cross(a, b *Vector) Vector {
-	return Vector{
-		a[1]*b[2] - a[2]*b[1],
-		a[2]*b[0] - a[0]*b[2],
-		a[0]*b[1] - a[1]*b[0],
-	}
+	a3 := a.Vec3DividedByW()
+	b3 := b.Vec3DividedByW()
+	c3 := vector3.Cross(&a3, &b3)
+	return Vector{c3[0], c3[1], c3[2], 1}
 }
 
 // a,b夹角  [0,pi]
@@ -262,36 +310,6 @@ func Angle2(a, b, up *Vector) float32 {
 	}
 }
 
-// 两个分量最小值构成的新向量
-func Min(a, b *Vector) Vector {
-	l_min := *a
-	if l_min[0] > b[0] {
-		l_min[0] = b[0]
-	}
-	if l_min[1] > b[1] {
-		l_min[1] = b[1]
-	}
-	if l_min[2] > b[2] {
-		l_min[2] = b[2]
-	}
-	return l_min
-}
-
-// 两个分量最大值构成的新向量
-func Max(a, b *Vector) Vector {
-	l_max := *a
-	if l_max[0] < b[0] {
-		l_max[0] = b[0]
-	}
-	if l_max[1] < b[1] {
-		l_max[1] = b[1]
-	}
-	if l_max[2] < b[2] {
-		l_max[2] = b[2]
-	}
-	return l_max
-}
-
 // a - b的插值  t[0,1]
 func Interpolate(a, b *Vector, t float32) Vector {
 	if t < 0 {
@@ -305,5 +323,6 @@ func Interpolate(a, b *Vector, t float32) Vector {
 		a[0]*t1 + b[0]*t,
 		a[1]*t1 + b[1]*t,
 		a[2]*t1 + b[2]*t,
+		a[3]*t1 + b[3]*t,
 	}
 }
