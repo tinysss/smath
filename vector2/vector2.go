@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-10 16:58:56
  * @Last Modified by: sealon
- * @Last Modified time: 2020-09-17 19:06:50
+ * @Last Modified time: 2020-09-18 15:35:45
  * @Desc: float32 2D向量封装
  */
 package vector2
