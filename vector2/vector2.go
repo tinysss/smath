@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-10 16:58:56
  * @Last Modified by: sealon
- * @Last Modified time: 2020-09-18 15:35:45
+ * @Last Modified time: 2020-09-20 14:35:34
  * @Desc: float32 2D向量封装
  */
 package vector2
@@ -34,11 +34,11 @@ func FromNew(other generic.T) *Vector {
 
 //-------------------------------------------- 实现generic.T begin-------------------------------------
 func (t *Vector) Cols() int {
-	return 2
+	return 1
 }
 
 func (t *Vector) Rows() int {
-	return 1
+	return 2
 }
 
 func (t *Vector) Size() int {
@@ -49,8 +49,8 @@ func (t *Vector) Slice() []float32 {
 	return t[:]
 }
 
-func (t *Vector) Get(row, col int) float32 {
-	return t[col]
+func (t *Vector) Get(col, row int) float32 {
+	return t[row]
 }
 
 func (t *Vector) IsZero() bool {

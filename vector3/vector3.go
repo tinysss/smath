@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-14 10:59:46
  * @Last Modified by: sealon
- * @Last Modified time: 2020-09-17 19:07:06
+ * @Last Modified time: 2020-09-20 14:36:19
  * @Desc:
  */
 package vector3
@@ -42,11 +42,11 @@ func FromNew(other generic.T) *Vector {
 
 //-------------------------------------------- 实现generic.T begin-------------------------------------
 func (t *Vector) Cols() int {
-	return 3
+	return 1
 }
 
 func (t *Vector) Rows() int {
-	return 1
+	return 3
 }
 
 func (t *Vector) Size() int {
@@ -57,8 +57,8 @@ func (t *Vector) Slice() []float32 {
 	return t[:]
 }
 
-func (t *Vector) Get(row, col int) float32 {
-	return t[col]
+func (t *Vector) Get(col, row int) float32 {
+	return t[row]
 }
 
 func (t *Vector) IsZero() bool {
