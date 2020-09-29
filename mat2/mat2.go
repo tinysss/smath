@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-20 10:01:43
  * @Last Modified by: sealon
- * @Last Modified time: 2020-09-21 01:20:54
+ * @Last Modified time: 2020-09-29 17:29:00
  * @Desc:  使用列存储
  */
 package mat2
@@ -92,7 +92,6 @@ func (t *Mat2) Scaled(f float32) Mat2 {
 	return *r.Scale(f)
 }
 
-// 返回缩放比例的向量
 func (t *Mat2) Scaling() vector2.Vector {
 	return vector2.Vector{t[0][0], t[1][1]}
 }
@@ -103,6 +102,7 @@ func (t *Mat2) SetScaling(s *vector2.Vector) *Mat2 {
 	return t
 }
 
+// 迹
 func (t *Mat2) Trace() float32 {
 	return t[0][0] + t[1][1]
 }
