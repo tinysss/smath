@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-29 14:50:05
  * @Last Modified by: sealon
- * @Last Modified time: 2020-09-29 18:29:15
+ * @Last Modified time: 2020-09-30 18:01:50
  * @Desc:
  */
 package mat3
@@ -12,6 +12,7 @@ import (
 	"unsafe"
 
 	"github.com/tinysss/smath/generic"
+	"github.com/tinysss/smath/mat2"
 	"github.com/tinysss/smath/vector3"
 	"github.com/ungerik/go3d/vec2"
 )
@@ -153,4 +154,29 @@ func (t *Mat3) AssignMul(a, b *Mat3) *Mat3 {
 	t[1] = a.MulVec3(&b[1])
 	t[2] = a.MulVec3(&b[2])
 	return t
+}
+
+func (t *Mat3) AssignMat2x2(m *mat2.Mat2) *Mat3 {
+	*t = Mat3{
+		vector3.Vector{m[0][0], m[1][0], 0},
+		vector3.Vector{m[0][1], m[1][1], 0},
+		vector3.Vector{0, 0, 1},
+	}
+	return t
+}
+
+// 变换v，直接将结果给v
+func (t *Mat3) TransformVec3(v *vector3.Vector) {
+	vx := t[0][0]*v[0] + t[1][0]*v[1] + t[2][0]*v[2]
+	vy := t[0][1]*v[0] + t[1][1]*v[1] + t[2][1]*v[2]
+	v[2] = t[0][2]*v[0] + t[1][2]*v[1] + t[2][2]*v[2]
+	v[0] = vx
+	v[1] = vy
+}
+
+// 变换v，不该v，返回变换结果
+func (t *Mat3) TransformVec3Ret(v *vector3.Vector) *vector3.Vector {
+	l_nv := *v
+	t.TransformVec3(&l_nv)
+	return &l_nv
 }
