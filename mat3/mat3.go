@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-29 14:50:05
  * @Last Modified by: sealon
- * @Last Modified time: 2020-09-29 18:29:15
+ * @Last Modified time: 2020-09-30 18:01:50
  * @Desc:
  */
 package mat3
@@ -12,6 +12,7 @@ import (
 	"unsafe"
 
 	"github.com/tinysss/smath/generic"
+	"github.com/tinysss/smath/mat2"
 	"github.com/tinysss/smath/vector3"
 	"github.com/ungerik/go3d/vec2"
 )
@@ -152,5 +153,14 @@ func (t *Mat3) AssignMul(a, b *Mat3) *Mat3 {
 	t[0] = a.MulVec3(&b[0])
 	t[1] = a.MulVec3(&b[1])
 	t[2] = a.MulVec3(&b[2])
+	return t
+}
+
+func (t *Mat3) AssignMat2x2(m *mat2.Mat2) *Mat3 {
+	*t = Mat3{
+		vector3.Vector{m[0][0], m[1][0], 0},
+		vector3.Vector{m[0][1], m[1][1], 0},
+		vector3.Vector{0, 0, 1},
+	}
 	return t
 }
