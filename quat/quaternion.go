@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-10-16 14:32:31
  * @Last Modified by: sealon
- * @Last Modified time: 2020-10-17 12:21:10
+ * @Last Modified time: 2020-10-23 02:11:07
  * @Desc:
  */
 package quat
@@ -24,6 +24,16 @@ var (
 // 模
 func (t *Quaternion) Norm() float32 {
 	return t[0]*t[0] + t[1]*t[1] + t[2]*t[2] + t[3]*t[3]
+}
+
+// 模
+func (t *Quaternion) NormSqrt() float32 {
+	return math.Sqrt(t.Norm())
+}
+
+// 模
+func (t *Quaternion) Len() float32 {
+	return t.NormSqrt()
 }
 
 // 归一化
@@ -115,7 +125,7 @@ func FromEulerAnglesI2O(yHead, xPitch, zBank float32) Quaternion {
 	// qz := FromZAxisAngle(zBank)
 	// return Mul3(&qy, &qx, &qz)
 
-	// 20201017 效率更高
+	// 20201017 by sealon 效率更高
 	return Quaternion{
 		ch*sp*cb + sh*cp*sb,
 		sh*cp*cb - ch*sp*sb,
@@ -311,4 +321,11 @@ func Mul4(a, b, c, d *Quaternion) Quaternion {
 	q := Mul(a, b)
 	q = Mul(&q, c)
 	return Mul(&q, d)
+}
+
+// 差四元数　（ad=b  求d = a-1 * b ）
+func DiffQuat(a, b *Quaternion) Quaternion {
+	ainv := a.Inversed()
+	d := Mul(&ainv, b)
+	return d.Normalized()
 }
