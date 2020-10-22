@@ -239,8 +239,42 @@ func (t *Quaternion) Scale(c float32) *Quaternion {
 	return t
 }
 
-func (t *Quaternion) Scaled(c float32) Quaternion {
+func (t Quaternion) Scaled(c float32) Quaternion {
 	return Quaternion{t[0] * c, t[1] * c, t[2] * c, t[3] * c}
+}
+
+func (t *Quaternion) Sub(q Quaternion) *Quaternion {
+	t[0] -= q[0]
+	t[1] -= q[1]
+	t[2] -= q[2]
+	t[3] -= q[3]
+	return t
+}
+
+func (t *Quaternion) Subed(q Quaternion) Quaternion {
+	res := *t
+	res[0] -= q[0]
+	res[1] -= q[1]
+	res[2] -= q[2]
+	res[3] -= q[3]
+	return res
+}
+
+func (t *Quaternion) Add(q Quaternion) *Quaternion {
+	t[0] += q[0]
+	t[1] += q[1]
+	t[2] += q[2]
+	t[3] += q[3]
+	return t
+}
+
+func (t Quaternion) Added(q Quaternion) Quaternion {
+	res := t
+	res[0] += q[0]
+	res[1] += q[1]
+	res[2] += q[2]
+	res[3] += q[3]
+	return res
 }
 
 // 点积[1,-1]  越大表明两个角位移越接近
@@ -288,8 +322,7 @@ func (t *Quaternion) Powed(exponent float32) Quaternion {
 	return l_quat
 }
 
-// 点积[1,-1]  越大表明两个角位移越接近
-// PS: t,o 为标准数且方向相同才有意义
+// a•b=|a||b|cosθ  点积[1,-1]
 func Dot(a, b *Quaternion) float32 {
 	return a.Dot(b)
 }
@@ -328,4 +361,36 @@ func DiffQuat(a, b *Quaternion) Quaternion {
 	ainv := a.Inversed()
 	d := Mul(&ainv, b)
 	return d.Normalized()
+}
+
+func Clamp(a, low, high float32) float32 {
+	if a < low {
+		return low
+	} else if a > high {
+		return high
+	}
+
+	return a
+}
+
+func lerp(a, b *Quaternion, t float32) Quaternion {
+	return Ident
+}
+
+//
+func Slerp(a, b *Quaternion, t float32) Quaternion {
+	dot := Dot(a, b)
+	if dot > 0.9996 {
+		return lerp(a, b, t)
+	}
+
+	dot = Clamp(t, -1, 1) // cosalpha
+	theta := math.Acos(dot) * t
+
+	s, c := math.Sincos(theta)
+
+	resl := b.Subed(a.Scaled(dot))
+	resl.Normalize()
+
+	return a.Scaled(c).Added(resl.Scaled(s))
 }
