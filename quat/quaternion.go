@@ -373,15 +373,20 @@ func Clamp(a, low, high float32) float32 {
 	return a
 }
 
-func lerp(a, b *Quaternion, t float32) Quaternion {
-	return Ident
+func Lerp(a, b *Quaternion, t float32) *Quaternion {
+	l_res := a.Added(b.Subed((*a).Scaled(t)))
+	return &l_res
+}
+
+func NLerp(a, b *Quaternion, t float32) *Quaternion {
+	return Lerp(a, b, t).Normalize()
 }
 
 //
 func Slerp(a, b *Quaternion, t float32) Quaternion {
 	dot := Dot(a, b)
-	if dot > 0.9996 {
-		return lerp(a, b, t)
+	if dot > 0.9995 {
+		return *NLerp(a, b, t)
 	}
 
 	dot = Clamp(t, -1, 1) // cosalpha
