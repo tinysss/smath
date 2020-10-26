@@ -2,13 +2,14 @@
  * @Author: sealon
  * @Date: 2020-10-16 14:32:31
  * @Last Modified by: sealon
- * @Last Modified time: 2020-10-23 02:11:07
+ * @Last Modified time: 2020-10-26 17:49:21
  * @Desc:
  */
 package quat
 
 import (
 	math "github.com/barnex/fmath"
+	"github.com/tinysss/smath/sutil"
 
 	"github.com/tinysss/smath/vector3"
 	"github.com/tinysss/smath/vector4"
@@ -80,6 +81,12 @@ func FromAxisAngle(axis *vector3.Vector, angle float32) Quaternion {
 	return l_quat.Normalized()
 }
 
+// 返回 绕axis旋转angle的四元数
+func NewFromAxisAngle(axis *vector3.Vector, angle float32) *Quaternion {
+	l_quat := FromAxisAngle(axis, angle)
+	return &l_quat
+}
+
 // 返回 绕x轴选装angle的四元数
 func FromXAxisAngle(angle float32) Quaternion {
 	angle *= 0.5
@@ -109,9 +116,12 @@ func FromZAxisAngle(angle float32) Quaternion {
 	// return l_quat.Normalized()
 }
 
-// 返回 hpb(I2O unity是这种)欧拉角代表的四元数
-func FromEulerAnglesI2O(yHead, xPitch, zBank float32) Quaternion {
+// 返回 hpb(I2O)欧拉角构造的四元数  (使用限制角)
+func FromEulerAngles(yHead, xPitch, zBank float32) Quaternion {
+	xPitch = sutil.WrapPi(xPitch)
+	
 
+	zBank = sutil.WrapPi(zBank)
 	yHead /= 2.0
 	xPitch /= 2.0
 	zBank /= 2.0
@@ -135,25 +145,10 @@ func FromEulerAnglesI2O(yHead, xPitch, zBank float32) Quaternion {
 
 }
 
-// 返回 rpy(O2I)欧拉角代表的四元数
-// func FromEulerAnglesO2I(zRoll, xPitch, yYaw float32) Quaternion {
-
-// 	yYaw /= 2.0
-// 	xPitch /= 2.0
-// 	zRoll /= 2.0
-
-// 	sr, cr := math.Sincos(zRoll)
-// 	sp, cp := math.Sincos(xPitch)
-// 	sh, ch := math.Sincos(yYaw)
-
-// 	return Quaternion{
-// 		cr*sp*ch - sr*cp*sh,
-// 		cr*cp*sh + sr*sp*ch,
-// 		cr*sp*sh + sr*cp*ch,
-// 		cr*cp*ch - sr*sp*sh,
-// 	}
-
-// }
+func NewFromEulerAngles(yHead, xPitch, zBank float32) *Quaternion {
+	l_quat := FromEulerAngles(yHead, xPitch, zBank)
+	return &l_quat
+}
 
 func FromVec4(v *vector4.Vector) Quaternion {
 	return Quaternion(*v)
@@ -363,6 +358,15 @@ func DiffQuat(a, b *Quaternion) Quaternion {
 	return d.Normalized()
 }
 
+func Vec3Diff(a, b *vector3.Vector) Quaternion {
+	cr := vector3.Cross(a, b)
+	sr := math.Sqrt(2 * (1 + vector3.Dot(a, b)))
+	oosr := 1 / sr
+
+	q := Quaternion{cr[0] * oosr, cr[1] * oosr, cr[2] * oosr, sr * 0.5}
+	return q.Normalized()
+}
+
 func Clamp(a, low, high float32) float32 {
 	if a < low {
 		return low
@@ -382,14 +386,46 @@ func NLerp(a, b *Quaternion, t float32) *Quaternion {
 	return Lerp(a, b, t).Normalize()
 }
 
-//
+// [0-2pi] 顺时针
 func Slerp(a, b *Quaternion, t float32) Quaternion {
+	if t <= 0.0 {
+		return *a
+	} else if t >= 1.0 {
+		return *b
+	}
 	dot := Dot(a, b)
 	if dot > 0.9995 {
 		return *NLerp(a, b, t)
 	}
 
-	dot = Clamp(t, -1, 1) // cosalpha
+	dot = Clamp(dot, -1, 1) // cosalpha
+	theta := math.Acos(dot) * t
+
+	s, c := math.Sincos(theta)
+
+	resl := b.Subed(a.Scaled(dot))
+	resl.Normalize()
+
+	return a.Scaled(c).Added(resl.Scaled(s))
+}
+
+// [-pi,pi] 选择近角方向
+func SmartSlerp(a, b *Quaternion, t float32) Quaternion {
+	if t <= 0.0 {
+		return *a
+	} else if t >= 1.0 {
+		return *b
+	}
+	dot := Dot(a, b)
+	if dot > 0.9995 {
+		return *NLerp(a, b, t)
+	} else if dot <= 0.0 {
+		temp := b.Scaled(-1)
+		b = &temp
+		dot = -dot
+	}
+
+	dot = Clamp(dot, -1, 1) // cosalpha
 	theta := math.Acos(dot) * t
 
 	s, c := math.Sincos(theta)
