@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-10-16 14:32:31
  * @Last Modified by: sealon
- * @Last Modified time: 2020-10-26 17:49:21
+ * @Last Modified time: 2020-10-27 19:59:33
  * @Desc:
  */
 package quat
@@ -66,6 +66,11 @@ func (t *Quaternion) Normalized() Quaternion {
 	}
 }
 
+// 标准数判断
+func (t *Quaternion) IsNormalQuat() bool {
+	return math.Abs(t.Norm()-1) <= 0.0001
+}
+
 // 返回 绕axis旋转angle的四元数
 func FromAxisAngle(axis *vector3.Vector, angle float32) Quaternion {
 	axisnor := axis.Normalized()
@@ -118,10 +123,7 @@ func FromZAxisAngle(angle float32) Quaternion {
 
 // 返回 hpb(I2O)欧拉角构造的四元数  (使用限制角)
 func FromEulerAngles(yHead, xPitch, zBank float32) Quaternion {
-	xPitch = sutil.WrapPi(xPitch)
-	
-
-	zBank = sutil.WrapPi(zBank)
+	xPitch, yHead, zBank = sutil.CanonizeEuler(xPitch, yHead, zBank)
 	yHead /= 2.0
 	xPitch /= 2.0
 	zBank /= 2.0
@@ -135,7 +137,6 @@ func FromEulerAngles(yHead, xPitch, zBank float32) Quaternion {
 	// qz := FromZAxisAngle(zBank)
 	// return Mul3(&qy, &qx, &qz)
 
-	// 20201017 by sealon 效率更高
 	return Quaternion{
 		ch*sp*cb + sh*cp*sb,
 		sh*cp*cb - ch*sp*sb,
@@ -158,10 +159,10 @@ func (t *Quaternion) Vec4() vector4.Vector {
 	return vector4.Vector(*t)
 }
 
-// 标准数判断
-func (t *Quaternion) IsNormalQuat() bool {
-	return math.Abs(t.Norm()-1) <= 0.0001
-}
+// 提取欧拉角
+// func (t *Quaternion) ToEulerAngles() (ret *vector3.Vector) {
+// 	return
+// }
 
 // 提取轴角
 func (t *Quaternion) AxisAngle() (axis vector3.Vector, angle float32) {
@@ -216,6 +217,7 @@ func (t *Quaternion) RotateVec3(v *vector3.Vector) {
 	v[0] = q[0]
 	v[1] = q[1]
 	v[2] = q[2]
+
 }
 
 func (t *Quaternion) RotatedVec3(v *vector3.Vector) vector3.Vector {
@@ -358,23 +360,27 @@ func DiffQuat(a, b *Quaternion) Quaternion {
 	return d.Normalized()
 }
 
-func Vec3Diff(a, b *vector3.Vector) Quaternion {
-	cr := vector3.Cross(a, b)
-	sr := math.Sqrt(2 * (1 + vector3.Dot(a, b)))
+// a -> b的 quat
+func QuatBetweenVectors1(ai, bi *vector3.Vector) *Quaternion {
+	a := ai.Normalized()
+	b := bi.Normalized()
+	cr := vector3.Cross(&a, &b)
+	sr := math.Sqrt(2 * (1 + vector3.Dot(&a, &b)))
+	oosr := 1 / sr
+
+	q := Quaternion{cr[0] * oosr, cr[1] * oosr, cr[2] * oosr, sr * 0.5}
+	return q.Normalize()
+}
+
+func QuatBetweenVectors2(a, b vector3.Vector) Quaternion {
+	a.Normalize()
+	b.Normalize()
+	cr := vector3.Cross(&a, &b)
+	sr := math.Sqrt(2 * (1 + vector3.Dot(&a, &b)))
 	oosr := 1 / sr
 
 	q := Quaternion{cr[0] * oosr, cr[1] * oosr, cr[2] * oosr, sr * 0.5}
 	return q.Normalized()
-}
-
-func Clamp(a, low, high float32) float32 {
-	if a < low {
-		return low
-	} else if a > high {
-		return high
-	}
-
-	return a
 }
 
 func Lerp(a, b *Quaternion, t float32) *Quaternion {
@@ -398,7 +404,7 @@ func Slerp(a, b *Quaternion, t float32) Quaternion {
 		return *NLerp(a, b, t)
 	}
 
-	dot = Clamp(dot, -1, 1) // cosalpha
+	dot = sutil.Clamp(dot, -1, 1) // cosalpha
 	theta := math.Acos(dot) * t
 
 	s, c := math.Sincos(theta)
@@ -425,7 +431,7 @@ func SmartSlerp(a, b *Quaternion, t float32) Quaternion {
 		dot = -dot
 	}
 
-	dot = Clamp(dot, -1, 1) // cosalpha
+	dot = sutil.Clamp(dot, -1, 1) // cosalpha
 	theta := math.Acos(dot) * t
 
 	s, c := math.Sincos(theta)
