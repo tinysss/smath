@@ -2,53 +2,203 @@
  * @Author: sealon
  * @Date: 2020-10-26 17:38:02
  * @Last Modified by: sealon
- * @Last Modified time: 2020-10-26 21:03:58
+ * @Last Modified time: 2020-10-27 19:29:57
  * @Desc:
  */
 package sutil
 
-import math "github.com/barnex/fmath"
+import (
+	math "github.com/barnex/fmath"
+)
 
-// 限制在[-pi,pi]
-func WrapPi(theta float32) float32 {
-	// if math.Abs(math.Abs(theta)-KPi) <= 0.0001 {
-	// 	return theta
+func Abs(a float32) float32 {
+	if a < 0 {
+		return -a
+	} else if a == 0 {
+		return 0
+	}
+
+	return a
+}
+
+func FloatEqual(a, b float32) bool {
+	return FloatEqualThreshold(a, b, Epsilon)
+}
+
+func FloatEqualThreshold(a, b, epsilon float32) bool {
+	if a == b {
+		return true
+	}
+
+	// diff := math.Abs(a - b)
+	// if a*b == 0 || diff < MinNormal {
+	// 	return diff < epsilon*epsilon
 	// }
+
+	// return diff/(Abs(a)+Abs(b)) < epsilon
+
+	if a > b {
+		return a-b < epsilon
+	} else {
+		return b-a < epsilon
+	}
+}
+
+func Clamp(a, low, high float32) float32 {
+	if a < low {
+		return low
+	} else if a > high {
+		return high
+	}
+
+	return a
+}
+
+func ClampFunc(low, high float32) func(float32) float32 {
+	return func(a float32) float32 {
+		return Clamp(a, low, high)
+	}
+}
+
+func IsClamped(a, low, high float32) bool {
+	return a >= low && a <= high
+}
+
+// min,max
+func SetMin(a, b *float32) {
+	if *b < *a {
+		*a = *b
+	}
+}
+
+// max,min
+func SetMax(a, b *float32) {
+	if *a < *b {
+		*a = *b
+	}
+}
+
+func Round(v float32, precision int) float32 {
+	p := float32(precision)
+	t := v * math.Pow(10, p)
+	if t > 0 {
+		return math.Floor(t+0.5) / math.Pow(10, p)
+	}
+	return math.Ceil(t-0.5) / math.Pow(10, p)
+}
+
+// [-pi,pi]
+func WrapPi(theta float32) float32 {
+	// for theta > math.Pi {
+	// 	theta -= K2Pi
+	// }
+	// for theta < -math.Pi {
+	// 	theta += K2Pi
+	// }
+	// return theta
+
 	theta += math.Pi
 	theta -= math.Floor(theta*K1Over2Pi) * K2Pi
 	theta -= math.Pi
+
 	return theta
+
 }
 
-// 			   90,-50,200
-// func Canonize(pitch, heading, bank float32) {
-// 	fmt.Println("input   : ", pitch*sutil.Rad2Deg, heading*sutil.Rad2Deg, bank*sutil.Rad2Deg)
-// 	// 先将pitch限制在[-pi,pi]
-// 	pitch = sutil.WrapPi(pitch)
+// [-180,180]
+func WrapAngle(angle float32) float32 {
+	for angle > 180 {
+		angle -= 360
+	}
+	for angle < -180 {
+		angle += 360
+	}
+	return angle
+}
 
-// 	90
-// 	// 将pitch限制在[-90,90]
-// 	if pitch < -sutil.KPiOver2 {
-// 		fmt.Println("111")
-// 		// 若pitch(-90,-180]
-// 		pitch = -sutil.KPi - pitch
-// 		heading += pitch
-// 		bank += pitch
-// 	} else if pitch > sutil.KPiOver2 {
-// 		// 若pitch(90,180]
-// 		fmt.Println("222")
-// 		pitch = sutil.KPi - pitch    90
-// 		heading += sutil.KPi         130
-// 		bank += sutil.KPi            430
-// 	}
-// 	if math.Abs(pitch) > (sutil.KPiOver2 - 0.0001) {
-// 		fmt.Println("333:", math.Abs(pitch), sutil.KPiOver2-0.0001)
-// 		heading += bank       560
-// 		bank = 0.0
-// 	} else {
-// 		fmt.Println("444")
-// 		bank = sutil.WrapPi(bank)
-// 	}
-// 	heading = sutil.WrapPi(heading)
-// 	fmt.Println("output: ", pitch*sutil.Rad2Deg, heading*sutil.Rad2Deg, bank*sutil.Rad2Deg)
-// }
+// [0,360]
+func WrapAngle360(angle float32) float32 {
+	angle = WrapAngle(angle)
+	if angle < 0 {
+		angle += 360
+	}
+	return angle
+}
+
+// 限制欧拉 pitch[-pi/2,pi/2] heading[-pi,pi] bank[-pi,pi]
+func CanonizeEuler(pitch, heading, bank float32) (rp, rh, rb float32) {
+	pitch = WrapPi(pitch)
+	if pitch < -KPiOver2 {
+		pitch = -math.Pi - pitch
+		if pitch > 0 {
+			heading += pitch
+			bank += pitch
+		} else {
+			heading += math.Pi
+			bank += math.Pi
+		}
+
+	} else if pitch > KPiOver2 {
+		pitch = math.Pi - pitch
+		if pitch >= 0 {
+			heading += math.Pi
+			bank += math.Pi
+		} else {
+			heading += pitch
+			bank += pitch
+		}
+	}
+
+	if math.Abs(pitch) > (KPiOver2 - 0.001) {
+		if pitch > 0 {
+			heading -= bank
+		} else {
+			heading += bank
+		}
+
+		bank = 0.0
+	} else {
+		bank = WrapPi(bank)
+	}
+	heading = WrapPi(heading)
+	return pitch, heading, bank
+}
+
+// 限制欧拉 pitch[-90,90] heading[-180,180] bank[-180,180]
+func CanonizeEulerAngle(pitch, heading, bank float32) (rp, rh, rb float32) {
+	pitch = WrapAngle(pitch)
+	if pitch < -90 {
+		pitch = -180 - pitch
+		if pitch > 0 {
+			heading += pitch
+			bank += pitch
+		} else {
+			heading += 180
+			bank += 180
+		}
+
+	} else if pitch > 90 {
+		pitch = 180 - pitch
+		if pitch >= 0 {
+			heading += 180
+			bank += 180
+		} else {
+			heading += pitch
+			bank += pitch
+		}
+	}
+
+	if math.Abs(pitch) > (90 - 0.001) {
+		if pitch > 0 {
+			heading -= bank
+		} else {
+			heading += bank
+		}
+
+		bank = 0.0
+	} else {
+		bank = WrapAngle(bank)
+	}
+	heading = WrapAngle(heading)
+	return pitch, heading, bank
+}
