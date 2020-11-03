@@ -17,7 +17,8 @@ import (
 	"github.com/ungerik/go3d/vec2"
 )
 
-type Mat3 [3]vector3.Vector // 列存储
+// 列存储 每个vec代表一列
+type Mat3 [3]vector3.Vector
 
 var (
 	Zero = Mat3{}
@@ -179,4 +180,13 @@ func (t *Mat3) TransformVec3Ret(v *vector3.Vector) *vector3.Vector {
 	l_nv := *v
 	t.TransformVec3(&l_nv)
 	return &l_nv
+}
+
+func Mul(a, b *Mat3) *Mat3 {
+	l_matres := Mat3{
+		a.MulVec3(&b[0]),
+		a.MulVec3(&b[1]),
+		a.MulVec3(&b[2]),
+	}
+	return &l_matres
 }

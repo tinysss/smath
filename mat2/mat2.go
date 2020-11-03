@@ -15,7 +15,8 @@ import (
 	"github.com/tinysss/smath/vector2"
 )
 
-type Mat2 [2]vector2.Vector // 列存储
+// 列存储 每个vec代表一列
+type Mat2 [2]vector2.Vector
 
 var (
 	Zero = Mat2{}
