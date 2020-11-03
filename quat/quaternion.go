@@ -160,8 +160,8 @@ func (t *Quaternion) Vec4() vector4.Vector {
 }
 
 // 提取欧拉角
-// func (t *Quaternion) ToEulerAngles() (ret *vector3.Vector) {
-// 	return
+// func ToEulerAngles() (ret *vector3.Vector) {
+
 // }
 
 // 提取轴角
@@ -217,7 +217,6 @@ func (t *Quaternion) RotateVec3(v *vector3.Vector) {
 	v[0] = q[0]
 	v[1] = q[1]
 	v[2] = q[2]
-
 }
 
 func (t *Quaternion) RotatedVec3(v *vector3.Vector) vector3.Vector {
@@ -360,27 +359,23 @@ func DiffQuat(a, b *Quaternion) Quaternion {
 	return d.Normalized()
 }
 
-// a -> b的 quat
-func QuatBetweenVectors1(ai, bi *vector3.Vector) *Quaternion {
-	a := ai.Normalized()
-	b := bi.Normalized()
-	cr := vector3.Cross(&a, &b)
-	sr := math.Sqrt(2 * (1 + vector3.Dot(&a, &b)))
-	oosr := 1 / sr
-
-	q := Quaternion{cr[0] * oosr, cr[1] * oosr, cr[2] * oosr, sr * 0.5}
-	return q.Normalize()
-}
-
-func QuatBetweenVectors2(a, b vector3.Vector) Quaternion {
-	a.Normalize()
-	b.Normalize()
-	cr := vector3.Cross(&a, &b)
-	sr := math.Sqrt(2 * (1 + vector3.Dot(&a, &b)))
+func Vec3Diff(a, b *vector3.Vector) Quaternion {
+	cr := vector3.Cross(a, b)
+	sr := math.Sqrt(2 * (1 + vector3.Dot(a, b)))
 	oosr := 1 / sr
 
 	q := Quaternion{cr[0] * oosr, cr[1] * oosr, cr[2] * oosr, sr * 0.5}
 	return q.Normalized()
+}
+
+func Clamp(a, low, high float32) float32 {
+	if a < low {
+		return low
+	} else if a > high {
+		return high
+	}
+
+	return a
 }
 
 func Lerp(a, b *Quaternion, t float32) *Quaternion {
@@ -404,7 +399,7 @@ func Slerp(a, b *Quaternion, t float32) Quaternion {
 		return *NLerp(a, b, t)
 	}
 
-	dot = sutil.Clamp(dot, -1, 1) // cosalpha
+	dot = Clamp(dot, -1, 1) // cosalpha
 	theta := math.Acos(dot) * t
 
 	s, c := math.Sincos(theta)
@@ -431,7 +426,7 @@ func SmartSlerp(a, b *Quaternion, t float32) Quaternion {
 		dot = -dot
 	}
 
-	dot = sutil.Clamp(dot, -1, 1) // cosalpha
+	dot = Clamp(dot, -1, 1) // cosalpha
 	theta := math.Acos(dot) * t
 
 	s, c := math.Sincos(theta)
