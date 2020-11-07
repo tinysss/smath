@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-29 14:50:05
  * @Last Modified by: sealon
- * @Last Modified time: 2020-09-30 18:01:50
+ * @Last Modified time: 2020-11-07 20:02:06
  * @Desc:
  */
 package mat3
@@ -11,8 +11,10 @@ import (
 	"fmt"
 	"unsafe"
 
+	math "github.com/barnex/fmath"
 	"github.com/tinysss/smath/generic"
 	"github.com/tinysss/smath/mat2"
+	"github.com/tinysss/smath/sutil"
 	"github.com/tinysss/smath/vector3"
 	"github.com/ungerik/go3d/vec2"
 )
@@ -180,6 +182,49 @@ func (t *Mat3) TransformVec3Ret(v *vector3.Vector) *vector3.Vector {
 	l_nv := *v
 	t.TransformVec3(&l_nv)
 	return &l_nv
+}
+
+// 通过euler构建mat3
+func (t *Mat3) AssignEulerRotation(yHead, xPitch, zBank float32) *Mat3 {
+	xPitch, yHead, zBank = sutil.CanonizeEuler(xPitch, yHead, zBank)
+	sh, ch := math.Sincos(yHead)
+	sp, cp := math.Sincos(xPitch)
+	sb, cb := math.Sincos(zBank)
+
+	t[0][0] = ch*cb + sh*sp*sb
+	t[0][1] = -ch*sb + sh*sp*cb
+	t[0][2] = sh * cp
+
+	t[1][0] = sb * cp
+	t[1][1] = cb * cp
+	t[1][2] = -sp
+
+	t[2][0] = -sh*cb + ch*sp*sb
+	t[2][1] = sb*sh + ch*sp*cb
+	t[2][2] = ch * cp
+
+	return t
+}
+
+// 提取euler
+func (t *Mat3) ExtractEulerAngles() (yHead, xPitch, zRoll float32) {
+	sp := -t[1][2]
+	if sp <= -1 {
+		xPitch = -sutil.KPiOver2
+	} else if sp >= 1 {
+		xPitch = sutil.KPiOver2
+	} else {
+		xPitch = math.Asin(sp)
+	}
+
+	//
+	if sutil.FloatEqual(math.Abs(sp), 1.0) { // 万象锁．．．
+
+	} else {
+
+	}
+
+	return
 }
 
 func Mul(a, b *Mat3) *Mat3 {

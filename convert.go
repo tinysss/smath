@@ -2,14 +2,12 @@
  * @Author: sealon
  * @Date: 2020-11-05 18:05:17
  * @Last Modified by: sealon
- * @Last Modified time: 2020-11-06 02:56:28
+ * @Last Modified time: 2020-11-07 14:44:33
  * @Desc: 转换
  */
 package smath
 
 import (
-	"fmt"
-
 	math "github.com/barnex/fmath"
 	"github.com/tinysss/smath/mat3"
 	"github.com/tinysss/smath/quat"
@@ -34,7 +32,6 @@ func Mat3ToQuat(mat3 *mat3.Mat3) quat.Quaternion {
 	l_z := mat3.Get(2, 2) - mat3.Get(0, 0) - mat3.Get(1, 1)
 	l_w := l_tr
 
-	fmt.Println("l_tr:", l_tr)
 	l_bigidx := 0
 	l_bigval := l_x
 	if l_y > l_bigval {
@@ -54,27 +51,23 @@ func Mat3ToQuat(mat3 *mat3.Mat3) quat.Quaternion {
 	l_scale := 0.25 / l_bigval               //1/4s
 	switch l_bigidx {
 	case 3: // w
-		fmt.Println("333")
 		l_quat[3] = l_bigval
 		l_quat[0] = (mat3.Get(1, 2) - mat3.Get(2, 1)) * l_scale
 		l_quat[1] = (mat3.Get(2, 0) - mat3.Get(0, 2)) * l_scale
 		l_quat[2] = (mat3.Get(0, 1) - mat3.Get(1, 0)) * l_scale
 	case 0: // x
-		fmt.Println("000")
 		l_quat[0] = l_bigval
 		l_quat[3] = (mat3.Get(1, 2) - mat3.Get(2, 1)) * l_scale
 		l_quat[1] = (mat3.Get(0, 1) + mat3.Get(1, 0)) * l_scale
 		l_quat[2] = (mat3.Get(2, 0) + mat3.Get(0, 2)) * l_scale
 
 	case 1: // y
-		fmt.Println("111")
 		l_quat[1] = l_bigval
 		l_quat[3] = (mat3.Get(2, 0) - mat3.Get(0, 2)) * l_scale
 		l_quat[0] = (mat3.Get(0, 1) + mat3.Get(1, 0)) * l_scale
 		l_quat[2] = (mat3.Get(1, 2) + mat3.Get(2, 1)) * l_scale
 
 	case 2: // z
-		fmt.Println("222")
 		l_quat[2] = l_bigval
 		l_quat[3] = (mat3.Get(0, 1) - mat3.Get(1, 0)) * l_scale
 		l_quat[0] = (mat3.Get(2, 0) + mat3.Get(0, 2)) * l_scale
@@ -83,3 +76,5 @@ func Mat3ToQuat(mat3 *mat3.Mat3) quat.Quaternion {
 
 	return l_quat.Normalized()
 }
+
+//
