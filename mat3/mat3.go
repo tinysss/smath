@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-29 14:50:05
  * @Last Modified by: sealon
- * @Last Modified time: 2020-11-07 20:02:06
+ * @Last Modified time: 2020-11-09 19:02:59
  * @Desc:
  */
 package mat3
@@ -184,13 +184,80 @@ func (t *Mat3) TransformVec3Ret(v *vector3.Vector) *vector3.Vector {
 	return &l_nv
 }
 
+func (t *Mat3) AssignXRotation(angle float32) *Mat3 {
+	sina, cosa := math.Sincos(angle)
+
+	t[0][0] = 1
+	t[0][1] = 0
+	t[0][2] = 0
+
+	t[1][0] = 0
+	t[1][1] = cosa
+	t[1][2] = sina
+
+	t[2][0] = 0
+	t[2][1] = -sina
+	t[2][2] = cosa
+
+	return t
+}
+
+func (t *Mat3) AssignYRotation(angle float32) *Mat3 {
+	sina, cosa := math.Sincos(angle)
+
+	t[0][0] = cosa
+	t[0][1] = 0
+	t[0][2] = -sina
+
+	t[1][0] = 0
+	t[1][1] = 1
+	t[1][2] = 0
+
+	t[2][0] = sina
+	t[2][1] = 0
+	t[2][2] = cosa
+
+	return t
+}
+
+func (t *Mat3) AssignZRotation(angle float32) *Mat3 {
+	sina, cosa := math.Sincos(angle)
+
+	t[0][0] = cosa
+	t[0][1] = sina
+	t[0][2] = 0
+
+	t[1][0] = -sina
+	t[1][1] = cosa
+	t[1][2] = 0
+
+	t[2][0] = 0
+	t[2][1] = 0
+	t[2][2] = 1
+
+	return t
+}
+
 // 通过euler构建mat3
 func (t *Mat3) AssignEulerRotation(yHead, xPitch, zBank float32) *Mat3 {
 	xPitch, yHead, zBank = sutil.CanonizeEuler(xPitch, yHead, zBank)
+
 	sh, ch := math.Sincos(yHead)
 	sp, cp := math.Sincos(xPitch)
 	sb, cb := math.Sincos(zBank)
 
+	// t[0][0] = ch*cb + sh*sp*sb
+	// t[0][1] = sb * cp
+	// t[0][2] = -sh*cb + ch*sp*sb
+
+	// t[1][0] = -ch*sb + sh*sp*cb
+	// t[1][1] = cb * cp
+	// t[1][2] = sb*sh + ch*sp*cb
+
+	// t[2][0] = sh * cp
+	// t[2][1] = -sp
+	// t[2][2] = ch * cp
+	//////////////////////////////
 	t[0][0] = ch*cb + sh*sp*sb
 	t[0][1] = -ch*sb + sh*sp*cb
 	t[0][2] = sh * cp
@@ -207,22 +274,27 @@ func (t *Mat3) AssignEulerRotation(yHead, xPitch, zBank float32) *Mat3 {
 }
 
 // 提取euler
-func (t *Mat3) ExtractEulerAngles() (yHead, xPitch, zRoll float32) {
+func (t *Mat3) ExtractEulerAngles() (yHead, xPitch, zBank float32) {
 	sp := -t[1][2]
-	if sp <= -1 {
+	if sp >= -0.999 {
+		if sp <= 0.999 { // 有效区间 sp(-1,1)
+			xPitch = math.Asin(sp)
+			yHead = math.Atan2(t[0][2], t[2][2])
+			zBank = math.Atan2(t[1][0], t[1][1])
+			// fmt.Println("ExtractEulerAngles:111")
+		} else { // sp  >= 0.999  按sinp = 1处理
+			xPitch = sutil.KPiOver2
+			yHead = math.Atan2(t[0][1], t[0][0])
+			zBank = 0
+			fmt.Println("ExtractEulerAngles:222")
+		}
+	} else { //sinp <= -0.999  按sinp = -1处理
 		xPitch = -sutil.KPiOver2
-	} else if sp >= 1 {
-		xPitch = sutil.KPiOver2
-	} else {
-		xPitch = math.Asin(sp)
+		yHead = math.Atan2(-t[0][1], t[0][0])
+		zBank = 0
+		fmt.Println("ExtractEulerAngles:333")
 	}
-
-	//
-	if sutil.FloatEqual(math.Abs(sp), 1.0) { // 万象锁．．．
-
-	} else {
-
-	}
+	// xPitch, yHead, zBank = sutil.CanonizeEuler(xPitch, yHead, zBank)
 
 	return
 }

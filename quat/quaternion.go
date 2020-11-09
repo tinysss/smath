@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-10-16 14:32:31
  * @Last Modified by: sealon
- * @Last Modified time: 2020-11-05 21:15:50
+ * @Last Modified time: 2020-11-09 15:15:58
  * @Desc:
  */
 package quat
@@ -160,7 +160,7 @@ func (t *Quaternion) Vec4() vector4.Vector {
 }
 
 // 提取欧拉角
-// func ToEulerAngles() (ret *vector3.Vector) {
+// func (t *Quaternion) ToEulerAngles() (yHead, xPitch, zBank float32) {
 
 // }
 
