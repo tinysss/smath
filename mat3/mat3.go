@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-29 14:50:05
  * @Last Modified by: sealon
- * @Last Modified time: 2020-11-09 19:02:59
+ * @Last Modified time: 2020-11-10 17:08:16
  * @Desc:
  */
 package mat3
@@ -34,6 +34,10 @@ var (
 
 func New(v1, v2, v3 vector3.Vector) *Mat3 {
 	return &Mat3{v1, v2, v3}
+}
+func NewEmpty() *Mat3 {
+	l_ret := Ident
+	return &l_ret
 }
 
 func FromNew(other generic.T) *Mat3 {
@@ -143,13 +147,26 @@ func (t *Mat3) Trace() float32 {
 	return t[0][0] + t[1][1] + t[2][2]
 }
 
-// v' = M * v
+func (t *Mat3) Mul(s float32) *Mat3 {
+	t[0].Scale(s)
+	t[1].Scale(s)
+	t[2].Scale(s)
+	return t
+}
+
+// v' = v * M
 func (t *Mat3) MulVec3(v *vector3.Vector) vector3.Vector {
 	return vector3.Vector{
 		t[0][0]*v[0] + t[1][0]*v[1] + t[2][0]*v[2],
 		t[0][1]*v[0] + t[1][1]*v[1] + t[2][1]*v[2],
 		t[0][2]*v[0] + t[1][2]*v[1] + t[2][2]*v[2],
 	}
+}
+
+func (t *Mat3) Mul3x3(o *Mat3) *Mat3 {
+	l_temp := *t
+	t.AssignMul(&l_temp, o)
+	return t
 }
 
 func (t *Mat3) AssignMul(a, b *Mat3) *Mat3 {
@@ -161,8 +178,8 @@ func (t *Mat3) AssignMul(a, b *Mat3) *Mat3 {
 
 func (t *Mat3) AssignMat2x2(m *mat2.Mat2) *Mat3 {
 	*t = Mat3{
-		vector3.Vector{m[0][0], m[1][0], 0},
-		vector3.Vector{m[0][1], m[1][1], 0},
+		vector3.Vector{m[0][0], m[0][1], 0},
+		vector3.Vector{m[1][0], m[1][1], 0},
 		vector3.Vector{0, 0, 1},
 	}
 	return t
@@ -246,28 +263,16 @@ func (t *Mat3) AssignEulerRotation(yHead, xPitch, zBank float32) *Mat3 {
 	sp, cp := math.Sincos(xPitch)
 	sb, cb := math.Sincos(zBank)
 
-	// t[0][0] = ch*cb + sh*sp*sb
-	// t[0][1] = sb * cp
-	// t[0][2] = -sh*cb + ch*sp*sb
-
-	// t[1][0] = -ch*sb + sh*sp*cb
-	// t[1][1] = cb * cp
-	// t[1][2] = sb*sh + ch*sp*cb
-
-	// t[2][0] = sh * cp
-	// t[2][1] = -sp
-	// t[2][2] = ch * cp
-	//////////////////////////////
 	t[0][0] = ch*cb + sh*sp*sb
-	t[0][1] = -ch*sb + sh*sp*cb
-	t[0][2] = sh * cp
+	t[0][1] = sb * cp
+	t[0][2] = -sh*cb + ch*sp*sb
 
-	t[1][0] = sb * cp
+	t[1][0] = -ch*sb + sh*sp*cb
 	t[1][1] = cb * cp
-	t[1][2] = -sp
+	t[1][2] = sb*sh + ch*sp*cb
 
-	t[2][0] = -sh*cb + ch*sp*sb
-	t[2][1] = sb*sh + ch*sp*cb
+	t[2][0] = sh * cp
+	t[2][1] = -sp
 	t[2][2] = ch * cp
 
 	return t
@@ -275,28 +280,70 @@ func (t *Mat3) AssignEulerRotation(yHead, xPitch, zBank float32) *Mat3 {
 
 // 提取euler
 func (t *Mat3) ExtractEulerAngles() (yHead, xPitch, zBank float32) {
-	sp := -t[1][2]
+	sp := -t[2][1]
 	if sp >= -0.999 {
 		if sp <= 0.999 { // 有效区间 sp(-1,1)
 			xPitch = math.Asin(sp)
-			yHead = math.Atan2(t[0][2], t[2][2])
-			zBank = math.Atan2(t[1][0], t[1][1])
-			// fmt.Println("ExtractEulerAngles:111")
+			yHead = math.Atan2(t[2][0], t[2][2])
+			zBank = math.Atan2(t[0][1], t[1][1])
 		} else { // sp  >= 0.999  按sinp = 1处理
 			xPitch = sutil.KPiOver2
-			yHead = math.Atan2(t[0][1], t[0][0])
+			yHead = math.Atan2(t[1][0], t[0][0])
 			zBank = 0
-			fmt.Println("ExtractEulerAngles:222")
 		}
 	} else { //sinp <= -0.999  按sinp = -1处理
 		xPitch = -sutil.KPiOver2
-		yHead = math.Atan2(-t[0][1], t[0][0])
+		yHead = math.Atan2(-t[1][0], t[0][0])
 		zBank = 0
-		fmt.Println("ExtractEulerAngles:333")
 	}
 	// xPitch, yHead, zBank = sutil.CanonizeEuler(xPitch, yHead, zBank)
 
 	return
+}
+
+// |Mat|
+// a11a22a33 + a12a23a31 + a13a21a32- a13a22a31 - a12a21a33 - a11a23a32
+func (t *Mat3) Det() float32 {
+	return t[0][0]*t[1][1]*t[2][2] +
+		t[0][1]*t[1][2]*t[2][0] +
+		t[0][2]*t[1][0]*t[2][1] -
+		t[0][2]*t[1][1]*t[2][0] -
+		t[0][1]*t[1][0]*t[2][2] -
+		t[0][0]*t[1][2]*t[2][1]
+
+}
+
+// 逆
+func (t *Mat3) Inv() *Mat3 {
+	det := t.Det()
+	if sutil.FloatEqual(det, 0) {
+		return NewEmpty()
+	}
+
+	retMat := New(
+		vector3.Vector{
+			t[1][1]*t[2][2] - t[2][1]*t[1][2],
+			t[2][1]*t[0][2] - t[0][1]*t[2][2],
+			t[0][1]*t[1][2] - t[1][1]*t[0][2]},
+
+		vector3.Vector{
+			t[2][0]*t[1][2] - t[1][0]*t[2][2],
+			t[0][0]*t[2][2] - t[2][0]*t[0][2],
+			t[1][0]*t[0][2] - t[0][0]*t[1][2]},
+		vector3.Vector{
+			t[1][0]*t[2][1] - t[2][0]*t[1][1],
+			t[2][0]*t[0][1] - t[0][0]*t[2][1],
+			t[0][0]*t[1][1] - t[1][0]*t[0][1]})
+
+	return retMat.Mul(1 / det)
+}
+
+// 转置
+func (t *Mat3) Transpose() *Mat3 {
+	t[0][1], t[1][0] = t[1][0], t[0][1]
+	t[0][2], t[2][0] = t[2][0], t[0][2]
+	t[1][2], t[2][1] = t[2][1], t[1][2]
+	return t
 }
 
 func Mul(a, b *Mat3) *Mat3 {

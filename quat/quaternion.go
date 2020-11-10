@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-10-16 14:32:31
  * @Last Modified by: sealon
- * @Last Modified time: 2020-11-09 15:15:58
+ * @Last Modified time: 2020-11-10 10:59:07
  * @Desc:
  */
 package quat
@@ -121,9 +121,16 @@ func FromZAxisAngle(angle float32) Quaternion {
 	// return l_quat.Normalized()
 }
 
-// 返回 hpb(I2O)欧拉角构造的四元数  (使用限制角)
+// 返回 欧拉角构造的四元数  (使用限制角)
 func FromEulerAngles(yHead, xPitch, zBank float32) Quaternion {
 	xPitch, yHead, zBank = sutil.CanonizeEuler(xPitch, yHead, zBank)
+
+	// qy := FromYAxisAngle(yHead)
+	// qx := FromXAxisAngle(xPitch)
+	// qz := FromZAxisAngle(zBank)
+
+	// return Mul3(&qy, &qx, &qz)
+
 	yHead /= 2.0
 	xPitch /= 2.0
 	zBank /= 2.0
@@ -131,11 +138,6 @@ func FromEulerAngles(yHead, xPitch, zBank float32) Quaternion {
 	sh, ch := math.Sincos(yHead)
 	sp, cp := math.Sincos(xPitch)
 	sb, cb := math.Sincos(zBank)
-
-	// qy := FromYAxisAngle(yHead)
-	// qx := FromXAxisAngle(xPitch)
-	// qz := FromZAxisAngle(zBank)
-	// return Mul3(&qy, &qx, &qz)
 
 	return Quaternion{
 		ch*sp*cb + sh*cp*sb,
@@ -160,9 +162,27 @@ func (t *Quaternion) Vec4() vector4.Vector {
 }
 
 // 提取欧拉角
-// func (t *Quaternion) ToEulerAngles() (yHead, xPitch, zBank float32) {
+func (t *Quaternion) ToEulerAngles() (yHead, xPitch, zBank float32) {
+	sp := -2.0 * (t[1]*t[2] - t[3]*t[0])
+	if sp >= -0.999 {
+		if sp <= 0.999 { // 有效区间 sp(-1,1)
+			xPitch = math.Asin(sp)
+			yHead = math.Atan2(t[0]*t[2]+t[3]*t[1], 0.5-t[0]*t[0]-t[1]*t[1])
+			zBank = math.Atan2(t[0]*t[1]+t[3]*t[2], 0.5-t[0]*t[0]-t[2]*t[2])
+		} else { // sp  >= 0.999  按sinp = 1处理
+			xPitch = sutil.KPiOver2
+			yHead = math.Atan2(-t[0]*t[2]+t[3]*t[1], 0.5-t[1]*t[1]-t[2]*t[2])
+			zBank = 0
+		}
+	} else { //sinp <= -0.999  按sinp = -1处理
+		xPitch = -sutil.KPiOver2
+		yHead = math.Atan2(t[0]*t[2]+t[3]*t[1], 0.5-t[1]*t[1]-t[2]*t[2])
+		zBank = 0
+	}
+	// xPitch, yHead, zBank = sutil.CanonizeEuler(xPitch, yHead, zBank)
 
-// }
+	return
+}
 
 // 提取轴角
 func (t *Quaternion) AxisAngle() (axis vector3.Vector, angle float32) {

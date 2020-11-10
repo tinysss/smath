@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-11-05 18:05:17
  * @Last Modified by: sealon
- * @Last Modified time: 2020-11-09 15:13:24
+ * @Last Modified time: 2020-11-10 10:35:07
  * @Desc: 转换
  */
 package smath
@@ -76,11 +76,3 @@ func Mat3ToQuat(mat3 *mat3.Mat3) quat.Quaternion {
 
 	return l_quat.Normalized()
 }
-
-// euler -> mat3
-// func QuatToMat3(quat *quat.Quaternion) mat3.Mat3 {
-// }
-
-// mat3 -> euler
-// func QuatToMat3(quat *quat.Quaternion) mat3.Mat3 {
-// }

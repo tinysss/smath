@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-20 10:01:43
  * @Last Modified by: sealon
- * @Last Modified time: 2020-09-29 17:29:00
+ * @Last Modified time: 2020-11-10 17:13:06
  * @Desc:  使用列存储
  */
 package mat2
@@ -108,6 +108,7 @@ func (t *Mat2) Trace() float32 {
 	return t[0][0] + t[1][1]
 }
 
+// v` = v * M
 func (t *Mat2) MulVec2(v *vector2.Vector) vector2.Vector {
 	return vector2.Vector{
 		t[0][0]*v[0] + t[1][0]*v[1],

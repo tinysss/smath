@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-17 17:54:30
  * @Last Modified by: sealon
- * @Last Modified time: 2020-09-20 14:37:04
+ * @Last Modified time: 2020-11-10 17:45:28
  * @Desc:
  */
 
@@ -266,13 +266,13 @@ func Sub(a, b *Vector) Vector {
 	return Vector{a1[0] - b1[0], a1[1] - b1[1], a1[2] - b1[2], 1}
 }
 
-func Dot(a, b *Vector) float32 {
+func Dot3(a, b *Vector) float32 {
 	a3 := a.Vec3DividedByW()
 	b3 := b.Vec3DividedByW()
 	return vector3.Dot(&a3, &b3)
 }
 
-func Dot4(a, b *Vector) float32 {
+func Dot(a, b *Vector) float32 {
 	return a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3]
 }
 
