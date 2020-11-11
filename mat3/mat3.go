@@ -2,7 +2,7 @@
  * @Author: sealon
  * @Date: 2020-09-29 14:50:05
  * @Last Modified by: sealon
- * @Last Modified time: 2020-11-10 17:08:16
+ * @Last Modified time: 2020-11-11 10:14:23
  * @Desc:
  */
 package mat3
@@ -299,6 +299,14 @@ func (t *Mat3) ExtractEulerAngles() (yHead, xPitch, zBank float32) {
 	// xPitch, yHead, zBank = sutil.CanonizeEuler(xPitch, yHead, zBank)
 
 	return
+}
+
+func (t *Mat3) AssignCoordinateSystem(x, y, z *vector3.Vector) *Mat3 {
+	t[0] = *x
+	t[1] = *y
+	t[2] = *z
+
+	return t
 }
 
 // |Mat|

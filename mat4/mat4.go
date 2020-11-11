@@ -2,13 +2,15 @@
  * @Author: sealon
  * @Date: 2020-11-10 14:55:56
  * @Last Modified by: sealon
- * @Last Modified time: 2020-11-10 18:26:52
+ * @Last Modified time: 2020-11-11 17:21:30
  * @Desc:
  */
 package mat4
 
 import (
+	"bytes"
 	"fmt"
+	"text/tabwriter"
 	"unsafe"
 
 	math "github.com/barnex/fmath"
@@ -93,6 +95,17 @@ func (t *Mat4) IsZero() bool {
 	return *t == Zero
 }
 
+func (t Mat4) String() string {
+	buf := new(bytes.Buffer)
+	w := tabwriter.NewWriter(buf, 4, 4, 1, ' ', tabwriter.AlignRight)
+	for i := range t {
+		fmt.Fprintf(w, "%.3f\t%.3f\t%.3f\t%.3f\t\n", t[i][0], t[i][1], t[i][2], t[i][3])
+	}
+	w.Flush()
+
+	return buf.String()
+}
+
 //-------------------------------------------- 实现generic.T end -------------------------------------
 
 func (t *Mat4) Scale(f float32) *Mat4 {
@@ -109,8 +122,12 @@ func (t *Mat4) Scaled(f float32) Mat4 {
 }
 
 func (t *Mat4) Mul(f float32) *Mat4 {
+
 	for i := range t {
-		t[i].Scale(f)
+		t[i][0] *= f
+		t[i][1] *= f
+		t[i][2] *= f
+		t[i][3] *= f
 	}
 	return t
 }
@@ -121,7 +138,6 @@ func (t *Mat4) Muled(f float32) Mat4 {
 	return result
 }
 
-// 未验证
 func (t *Mat4) MultMatrix(m *Mat4) *Mat4 {
 	for i := range t {
 		col := vector4.Vector{t[0][i], t[1][i], t[2][i], t[3][i]}
@@ -143,8 +159,8 @@ func (t *Mat4) Trace3() float32 {
 
 func (t *Mat4) AssignMat2x2(m *mat2.Mat2) *Mat4 {
 	*t = Mat4{
-		vector4.Vector{m[0][0], m[0][1], 0, 0},
-		vector4.Vector{m[1][0], m[1][1], 0, 0},
+		vector4.Vector{t[0][0], t[0][1], 0, 0},
+		vector4.Vector{t[1][0], t[1][1], 0, 0},
 		vector4.Vector{0, 0, 1, 0},
 		vector4.Vector{0, 0, 0, 1},
 	}
@@ -153,9 +169,9 @@ func (t *Mat4) AssignMat2x2(m *mat2.Mat2) *Mat4 {
 
 func (t *Mat4) AssignMat3x3(m *mat3.Mat3) *Mat4 {
 	*t = Mat4{
-		vector4.Vector{m[0][0], m[0][1], m[0][2], 0},
-		vector4.Vector{m[1][0], m[1][1], m[1][2], 0},
-		vector4.Vector{m[2][0], m[2][1], m[2][2], 0},
+		vector4.Vector{t[0][0], t[0][1], t[0][2], 0},
+		vector4.Vector{t[1][0], t[1][1], t[1][2], 0},
+		vector4.Vector{t[2][0], t[2][1], t[2][2], 0},
 		vector4.Vector{0, 0, 0, 1},
 	}
 	return t
@@ -171,7 +187,6 @@ func (t *Mat4) MulVec4(v *vector4.Vector) vector4.Vector {
 	}
 }
 
-// 未验证
 func (t *Mat4) AssignMul(a, b *Mat4) *Mat4 {
 	t[0] = a.MulVec4(&b[0])
 	t[1] = a.MulVec4(&b[1])
@@ -348,4 +363,178 @@ func (t *Mat4) AssignZRotation(angle float32) *Mat4 {
 	t[3][3] = 1
 
 	return t
+}
+
+func (t *Mat4) AssignCoordinateSystem(x, y, z *vector3.Vector) *Mat4 {
+	t[0][0] = x[0]
+	t[0][1] = x[1]
+	t[0][2] = x[2]
+	t[0][3] = 0
+
+	t[1][0] = y[0]
+	t[1][1] = y[1]
+	t[1][2] = y[2]
+	t[1][3] = 0
+
+	t[2][0] = z[0]
+	t[2][1] = z[1]
+	t[2][2] = z[2]
+	t[2][3] = 0
+
+	t[3][0] = 0
+	t[3][1] = 0
+	t[3][2] = 0
+	t[3][3] = 1
+
+	return t
+}
+
+// 通过euler构建mat3
+func (t *Mat4) AssignEulerRotation(yHead, xPitch, zBank float32) *Mat4 {
+	xPitch, yHead, zBank = sutil.CanonizeEuler(xPitch, yHead, zBank)
+
+	sh, ch := math.Sincos(yHead)
+	sp, cp := math.Sincos(xPitch)
+	sb, cb := math.Sincos(zBank)
+
+	t[0][0] = ch*cb + sh*sp*sb
+	t[0][1] = sb * cp
+	t[0][2] = -sh*cb + ch*sp*sb
+	t[0][3] = 0
+
+	t[1][0] = -ch*sb + sh*sp*cb
+	t[1][1] = cb * cp
+	t[1][2] = sb*sh + ch*sp*cb
+	t[1][3] = 0
+
+	t[2][0] = sh * cp
+	t[2][1] = -sp
+	t[2][2] = ch * cp
+	t[2][3] = 0
+
+	t[3][0] = 0
+	t[3][1] = 0
+	t[3][2] = 0
+	t[3][3] = 1
+
+	return t
+}
+
+// 提取euler
+func (t *Mat4) ExtractEulerAngles() (yHead, xPitch, zBank float32) {
+	sp := -t[2][1]
+	if sp >= -0.999 {
+		if sp <= 0.999 { // 有效区间 sp(-1,1)
+			xPitch = math.Asin(sp)
+			yHead = math.Atan2(t[2][0], t[2][2])
+			zBank = math.Atan2(t[0][1], t[1][1])
+		} else { // sp  >= 0.999  按sinp = 1处理
+			xPitch = sutil.KPiOver2
+			yHead = math.Atan2(t[1][0], t[0][0])
+			zBank = 0
+		}
+	} else { //sinp <= -0.999  按sinp = -1处理
+		xPitch = -sutil.KPiOver2
+		yHead = math.Atan2(-t[1][0], t[0][0])
+		zBank = 0
+	}
+	// xPitch, yHead, zBank = sutil.CanonizeEuler(xPitch, yHead, zBank)
+
+	return
+}
+
+//
+func (t *Mat4) Det3x3() float32 {
+	return t[0][0]*t[1][1]*t[2][2] +
+		t[0][1]*t[1][2]*t[2][0] +
+		t[0][2]*t[1][0]*t[2][1] -
+		t[0][2]*t[1][1]*t[2][0] -
+		t[0][1]*t[1][0]*t[2][2] -
+		t[0][0]*t[1][2]*t[2][1]
+}
+
+func (t *Mat4) Det() float32 {
+	return t[3][0]*t[2][1]*t[1][2]*t[0][3] - t[2][0]*t[3][1]*t[1][2]*t[0][3] - t[3][0]*t[1][1]*t[2][2]*t[0][3] + t[1][0]*t[3][1]*t[2][2]*t[0][3] +
+		t[2][0]*t[1][1]*t[3][2]*t[0][3] - t[1][0]*t[2][1]*t[3][2]*t[0][3] - t[3][0]*t[2][1]*t[0][2]*t[1][3] + t[2][0]*t[3][1]*t[0][2]*t[1][3] +
+		t[3][0]*t[0][1]*t[2][2]*t[1][3] - t[0][0]*t[3][1]*t[2][2]*t[1][3] - t[2][0]*t[0][1]*t[3][2]*t[1][3] + t[0][0]*t[2][1]*t[3][2]*t[1][3] +
+		t[3][0]*t[1][1]*t[0][2]*t[2][3] - t[1][0]*t[3][1]*t[0][2]*t[2][3] - t[3][0]*t[0][1]*t[1][2]*t[2][3] + t[0][0]*t[3][1]*t[1][2]*t[2][3] +
+		t[1][0]*t[0][1]*t[3][2]*t[2][3] - t[0][0]*t[1][1]*t[3][2]*t[2][3] - t[2][0]*t[1][1]*t[0][2]*t[3][3] + t[1][0]*t[2][1]*t[0][2]*t[3][3] +
+		t[2][0]*t[0][1]*t[1][2]*t[3][3] - t[0][0]*t[2][1]*t[1][2]*t[3][3] - t[1][0]*t[0][1]*t[2][2]*t[3][3] + t[0][0]*t[1][1]*t[2][2]*t[3][3]
+}
+
+//
+func (t *Mat4) Transpose() *Mat4 {
+	t[0][1], t[1][0] = t[1][0], t[0][1]
+	t[0][2], t[2][0] = t[2][0], t[0][2]
+	t[0][3], t[3][0] = t[3][0], t[0][3]
+
+	t[1][2], t[2][1] = t[2][1], t[1][2]
+	t[1][3], t[3][1] = t[3][1], t[1][3]
+	t[2][3], t[3][2] = t[3][2], t[2][3]
+
+	return t
+}
+
+func (t *Mat4) Transposed() Mat4 {
+	l_temp := *t
+	l_temp[0][1], l_temp[1][0] = l_temp[1][0], l_temp[0][1]
+	l_temp[0][2], l_temp[2][0] = l_temp[2][0], l_temp[0][2]
+	l_temp[0][3], l_temp[3][0] = l_temp[3][0], l_temp[0][3]
+
+	l_temp[1][2], l_temp[2][1] = l_temp[2][1], l_temp[1][2]
+	l_temp[1][3], l_temp[3][1] = l_temp[3][1], l_temp[1][3]
+	l_temp[2][3], l_temp[3][2] = l_temp[3][2], l_temp[2][3]
+
+	return l_temp
+}
+
+func (t *Mat4) maskedBlock(blockI, blockJ int) *mat3.Mat3 {
+	var m mat3.Mat3
+	m_i := 0
+	for i := 0; i < 4; i++ {
+		if i == blockI {
+			continue
+		}
+		m_j := 0
+		for j := 0; j < 4; j++ {
+			if j == blockJ {
+				continue
+			}
+			m[m_i][m_j] = t[i][j]
+			m_j++
+		}
+		m_i++
+	}
+	return &m
+}
+
+// adj
+func (t *Mat4) adjugate() *Mat4 {
+	matOri := *t
+	for i := 0; i < 4; i++ {
+		for j := 0; j < 4; j++ {
+			t[i][j] = matOri.maskedBlock(i, j).Det() * float32(((i+j)%2)*-2+1)
+		}
+	}
+
+	return t.Transpose()
+}
+
+func (t *Mat4) adjugated() Mat4 {
+	result := *t
+	result.adjugate()
+	return result
+}
+
+func (t *Mat4) Inv() *Mat4 {
+	initialDet := t.Det()
+	t.adjugate()
+	t.Mul(1 / initialDet)
+	return t
+}
+
+func (t *Mat4) Inverted() Mat4 {
+	result := *t
+	result.Inv()
+	return result
 }
